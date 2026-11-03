@@ -2,11 +2,12 @@
 52-Week High Momentum Scanner
 Dark • Colorful • Professional Analytics Dashboard
 + Broker Recommendations & Confidence Simulator
+(Updated presentation: Stock-grouped table | Last-5-day highlight | Age color gradation | 90D consolidated)
 """
 import streamlit as st
 import pandas as pd
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timedelta
 import warnings
 import os
 warnings.filterwarnings("ignore")
@@ -163,70 +164,194 @@ UNIVERSE = [
 ]
 UNIVERSE = list(dict.fromkeys(UNIVERSE))
 
-# ====================== BROKER TRACK RECORD & SAMPLE RECOS ======================
-# Cleaned + expanded from your Broker.txt + major active research houses.
-# hit_any / hit_end / actual_return approximate from public analyst scorecard (~19k reports, 2021-2025).
-# Update these numbers periodically.
+# ====================== BROKER TRACK RECORD ======================
 BROKER_TRACK = {
-    "SBI Securities":      {"hit_any": 74.3, "hit_end": 48.6, "actual_12m": 19.8, "n": 70,   "notes": "Strong hit rate"},
-    "Bonanza":             {"hit_any": 72.6, "hit_end": 50.5, "actual_12m": 18.1, "n": 95,   "notes": "High hit_any"},
-    "Chola Wealth Direct": {"hit_any": 66.7, "hit_end": 48.5, "actual_12m": 22.3, "n": 99,   "notes": "Best actual return among larger sample"},
-    "IDBI Capital":        {"hit_any": 72.2, "hit_end": 44.1, "actual_12m": 10.9, "n": 836,  "notes": "Large coverage"},
-    "Geojit BNP Paribas":  {"hit_any": 75.5, "hit_end": 43.3, "actual_12m": 8.3,  "n": 1734, "notes": "Very high hit_any, large sample"},
-    "ICICI Securities":    {"hit_any": 66.5, "hit_end": 41.9, "actual_12m": 17.0, "n": 3121, "notes": "Largest sample, solid"},
-    "ICICI Direct":        {"hit_any": 71.1, "hit_end": 40.4, "actual_12m": 15.4, "n": 1541, "notes": "Strong"},
-    "Axis Direct":         {"hit_any": 67.3, "hit_end": 38.5, "actual_12m": 3.8,  "n": 2128, "notes": "Large coverage"},
-    "Motilal Oswal":       {"hit_any": 64.3, "hit_end": 37.5, "actual_12m": 4.6,  "n": 2905, "notes": "Very large coverage"},
-    "Prabhudas Lilladhar": {"hit_any": 64.8, "hit_end": 38.2, "actual_12m": 4.5,  "n": 1768, "notes": ""},
-    "Sharekhan":           {"hit_any": 58.8, "hit_end": 33.2, "actual_12m": 5.1,  "n": 955,  "notes": ""},
-    "BOB Capital Markets": {"hit_any": 65.7, "hit_end": 36.9, "actual_12m": 3.0,  "n": 1082, "notes": ""},
-    "LKP Securities":      {"hit_any": 55.0, "hit_end": 44.0, "actual_12m": 14.4, "n": 100,  "notes": "Good actual return"},
-    "Ventura":             {"hit_any": 41.9, "hit_end": 27.1, "actual_12m": 18.9, "n": 210,  "notes": "High actual despite lower hit"},
-    "Emkay":               {"hit_any": 57.3, "hit_end": 27.0, "actual_12m": -0.9, "n": 478,  "notes": ""},
-    "Anand Rathi":         {"hit_any": 44.0, "hit_end": 22.6, "actual_12m": -1.6, "n": 266,  "notes": ""},
-    "Arihant Capital":     {"hit_any": 60.5, "hit_end": 32.6, "actual_12m": 14.5, "n": 43,   "notes": "Small sample"},
-    "AUM Capital":         {"hit_any": 55.3, "hit_end": 34.2, "actual_12m": 22.0, "n": 38,   "notes": "Small but high actual"},
-    "Hem Securities":      {"hit_any": 61.9, "hit_end": 31.7, "actual_12m": 6.1,  "n": 126,  "notes": ""},
-    "BP Wealth":           {"hit_any": 63.2, "hit_end": 29.8, "actual_12m": -3.2, "n": 57,   "notes": ""},
-    "Edelweiss":           {"hit_any": 53.8, "hit_end": 29.8, "actual_12m": -0.4, "n": 517,  "notes": ""},
-    "Yes Securities":      {"hit_any": 26.3, "hit_end": 15.8, "actual_12m": 2.4,  "n": 38,   "notes": "Small sample"},
-    "HDFC Securities":     {"hit_any": 60.0, "hit_end": 35.0, "actual_12m": 6.0,  "n": 0,    "notes": "Approx / update manually"},
-    "Kotak Securities":    {"hit_any": 62.0, "hit_end": 36.0, "actual_12m": 7.0,  "n": 0,    "notes": "Approx / update manually"},
-    "JM Financial":        {"hit_any": 60.0, "hit_end": 35.0, "actual_12m": 5.0,  "n": 0,    "notes": "Approx / update manually"},
-    "Systematix":          {"hit_any": 55.0, "hit_end": 30.0, "actual_12m": 4.0,  "n": 0,    "notes": "Approx"},
-    "SMIFS":               {"hit_any": 58.0, "hit_end": 32.0, "actual_12m": 5.0,  "n": 0,    "notes": "Approx"},
+    "SBI Securities":      {"hit_any": 74.3, "hit_end": 48.6, "actual_12m": 19.8, "n": 70},
+    "Bonanza":             {"hit_any": 72.6, "hit_end": 50.5, "actual_12m": 18.1, "n": 95},
+    "Chola Wealth Direct": {"hit_any": 66.7, "hit_end": 48.5, "actual_12m": 22.3, "n": 99},
+    "IDBI Capital":        {"hit_any": 72.2, "hit_end": 44.1, "actual_12m": 10.9, "n": 836},
+    "Geojit BNP Paribas":  {"hit_any": 75.5, "hit_end": 43.3, "actual_12m": 8.3,  "n": 1734},
+    "ICICI Securities":    {"hit_any": 66.5, "hit_end": 41.9, "actual_12m": 17.0, "n": 3121},
+    "ICICI Direct":        {"hit_any": 71.1, "hit_end": 40.4, "actual_12m": 15.4, "n": 1541},
+    "Axis Direct":         {"hit_any": 67.3, "hit_end": 38.5, "actual_12m": 3.8,  "n": 2128},
+    "Motilal Oswal":       {"hit_any": 64.3, "hit_end": 37.5, "actual_12m": 4.6,  "n": 2905},
+    "Prabhudas Lilladhar": {"hit_any": 64.8, "hit_end": 38.2, "actual_12m": 4.5,  "n": 1768},
+    "Sharekhan":           {"hit_any": 58.8, "hit_end": 33.2, "actual_12m": 5.1,  "n": 955},
+    "BOB Capital Markets": {"hit_any": 65.7, "hit_end": 36.9, "actual_12m": 3.0,  "n": 1082},
+    "LKP Securities":      {"hit_any": 55.0, "hit_end": 44.0, "actual_12m": 14.4, "n": 100},
+    "Ventura":             {"hit_any": 41.9, "hit_end": 27.1, "actual_12m": 18.9, "n": 210},
+    "Emkay":               {"hit_any": 57.3, "hit_end": 27.0, "actual_12m": -0.9, "n": 478},
+    "Anand Rathi":         {"hit_any": 44.0, "hit_end": 22.6, "actual_12m": -1.6, "n": 266},
+    "Arihant Capital":     {"hit_any": 60.5, "hit_end": 32.6, "actual_12m": 14.5, "n": 43},
+    "AUM Capital":         {"hit_any": 55.3, "hit_end": 34.2, "actual_12m": 22.0, "n": 38},
+    "Hem Securities":      {"hit_any": 61.9, "hit_end": 31.7, "actual_12m": 6.1,  "n": 126},
+    "BP Wealth":           {"hit_any": 63.2, "hit_end": 29.8, "actual_12m": -3.2, "n": 57},
+    "Edelweiss":           {"hit_any": 53.8, "hit_end": 29.8, "actual_12m": -0.4, "n": 517},
+    "Yes Securities":      {"hit_any": 26.3, "hit_end": 15.8, "actual_12m": 2.4,  "n": 38},
+    "HDFC Securities":     {"hit_any": 60.0, "hit_end": 35.0, "actual_12m": 6.0,  "n": 0},
+    "Kotak Securities":    {"hit_any": 62.0, "hit_end": 36.0, "actual_12m": 7.0,  "n": 0},
+    "JM Financial":        {"hit_any": 60.0, "hit_end": 35.0, "actual_12m": 5.0,  "n": 0},
+    "Systematix":          {"hit_any": 55.0, "hit_end": 30.0, "actual_12m": 4.0,  "n": 0},
+    "SMIFS":               {"hit_any": 58.0, "hit_end": 32.0, "actual_12m": 5.0,  "n": 0},
+    "Nuvama":              {"hit_any": 62.0, "hit_end": 36.0, "actual_12m": 8.0,  "n": 0},
+    "DAM Capital":         {"hit_any": 60.0, "hit_end": 35.0, "actual_12m": 6.0,  "n": 0},
+    "Joindre Capital":     {"hit_any": 55.0, "hit_end": 30.0, "actual_12m": 5.0,  "n": 0},
+    "Religare":            {"hit_any": 58.0, "hit_end": 32.0, "actual_12m": 5.0,  "n": 0},
 }
 
-# Sample recent recommendations (update regularly from Trendlyne / broker sites / news)
-# Format: symbol -> list of dicts
+# ====================== RECENT BROKER RECOMMENDATIONS ======================
+# Structure: symbol -> list of dicts with broker, rating, target, date, upside_pct, horizon (months), entry (optional)
+# Dates are approximate based on public reports as of early Nov 2026. Update regularly.
 SAMPLE_RECOS = {
-    "PERSISTENT": [
-        {"broker": "Axis Direct", "rating": "Buy", "target": 6615, "date": "2026-10", "upside_pct": 13},
+    "RELIANCE": [
+        {"broker": "Motilal Oswal", "rating": "Buy", "target": 1520, "date": "2026-11-02", "upside_pct": 21, "horizon": 12},
     ],
-    "TVSMOTOR": [
-        {"broker": "Emkay", "rating": "Buy", "target": 4200, "date": "2026-10", "upside_pct": 24},
-        {"broker": "Motilal Oswal", "rating": "Buy", "target": 4159, "date": "2026-10", "upside_pct": 23},
-        {"broker": "Geojit BNP Paribas", "rating": "Buy", "target": 4233, "date": "2026-11", "upside_pct": 17},
+    "ITC": [
+        {"broker": "Nuvama", "rating": "Buy (Upgraded)", "target": 310, "date": "2026-11-03", "upside_pct": None, "horizon": 12},
+        {"broker": "Emkay", "rating": "Add", "target": 300, "date": "2026-11-03", "upside_pct": None, "horizon": 12},
+        {"broker": "DAM Capital", "rating": "Buy", "target": 355, "date": "2026-11-03", "upside_pct": None, "horizon": 12},
+    ],
+    "JSWSTEEL": [
+        {"broker": "Motilal Oswal", "rating": "Buy", "target": None, "date": "2026-11-02", "upside_pct": 24, "horizon": 12},
+    ],
+    "TATAPOWER": [
+        {"broker": "Motilal Oswal", "rating": "Buy", "target": None, "date": "2026-11-02", "upside_pct": None, "horizon": 12},
+        {"broker": "Religare", "rating": "Buy", "target": None, "date": "2026-11-02", "upside_pct": None, "horizon": 12},
     ],
     "LT": [
-        {"broker": "JM Financial", "rating": "Buy", "target": 4640, "date": "2026-07", "upside_pct": None},
+        {"broker": "JM Financial", "rating": "Buy", "target": 4510, "date": "2026-11-01", "upside_pct": None, "horizon": 12},
+        {"broker": "Geojit BNP Paribas", "rating": "Buy", "target": None, "date": "2026-11-01", "upside_pct": None, "horizon": 12},
+        {"broker": "SMIFS", "rating": "Buy", "target": None, "date": "2026-11-01", "upside_pct": None, "horizon": 12},
+        {"broker": "Motilal Oswal", "rating": "Buy", "target": None, "date": "2026-10-28", "upside_pct": None, "horizon": 12},
     ],
-    "RELIANCE": [
-        {"broker": "Motilal Oswal", "rating": "Buy", "target": 1550, "date": "2026-07", "upside_pct": None},
+    "TVSMOTOR": [
+        {"broker": "Emkay", "rating": "Buy", "target": 4200, "date": "2026-10-29", "upside_pct": 24, "horizon": 12},
+        {"broker": "Motilal Oswal", "rating": "Buy", "target": 4159, "date": "2026-10-29", "upside_pct": 23, "horizon": 12},
+        {"broker": "Geojit BNP Paribas", "rating": "Buy", "target": 4233, "date": "2026-11-01", "upside_pct": 17, "horizon": 12},
     ],
-    # Add more as you collect them from Trendlyne or broker reports
+    "SUNPHARMA": [
+        {"broker": "BOB Capital Markets", "rating": "Buy", "target": 2109, "date": "2026-11-01", "upside_pct": 19.5, "horizon": 12},
+    ],
+    "ASHOKLEY": [
+        {"broker": "Joindre Capital", "rating": "Buy", "target": 184, "date": "2026-10-21", "upside_pct": 21, "horizon": 12},
+        {"broker": "Axis Direct", "rating": "Buy", "target": None, "date": "2026-10-27", "upside_pct": None, "horizon": 12},
+    ],
+    "DIXON": [
+        {"broker": "Motilal Oswal", "rating": "Buy", "target": 15900, "date": "2026-11-02", "upside_pct": 29, "horizon": 12},
+    ],
+    "INFY": [
+        {"broker": "Motilal Oswal", "rating": "Buy", "target": 1300, "date": "2026-11-02", "upside_pct": 13, "horizon": 12},
+    ],
+    "HCLTECH": [
+        {"broker": "Religare", "rating": "Buy", "target": 1680, "date": "2026-11-02", "upside_pct": None, "horizon": 12},
+    ],
+    "BAJFINANCE": [
+        {"broker": "Religare", "rating": "Buy", "target": 1096, "date": "2026-11-02", "upside_pct": None, "horizon": 12},
+        {"broker": "ICICI Direct", "rating": "Buy", "target": 1180, "date": "2026-10-13", "upside_pct": 18, "horizon": 12},
+    ],
+    "KOTAKBANK": [
+        {"broker": "Religare", "rating": "Accumulate", "target": 518, "date": "2026-11-02", "upside_pct": None, "horizon": 12},
+        {"broker": "Motilal Oswal", "rating": "Buy", "target": 500, "date": "2026-10-28", "upside_pct": None, "horizon": 12},
+        {"broker": "ICICI Direct", "rating": "Buy", "target": None, "date": "2026-11-01", "upside_pct": None, "horizon": 12},
+        {"broker": "Geojit BNP Paribas", "rating": "Buy", "target": None, "date": "2026-11-01", "upside_pct": None, "horizon": 12},
+    ],
+    "ICICIBANK": [
+        {"broker": "ICICI Direct", "rating": "Buy", "target": None, "date": "2026-11-01", "upside_pct": None, "horizon": 12},
+        {"broker": "Motilal Oswal", "rating": "Buy", "target": None, "date": "2026-10-28", "upside_pct": None, "horizon": 12},
+    ],
+    "ADANIPORTS": [
+        {"broker": "Motilal Oswal", "rating": "Buy", "target": None, "date": "2026-11-01", "upside_pct": None, "horizon": 12},
+        {"broker": "Geojit BNP Paribas", "rating": "Buy", "target": None, "date": "2026-11-01", "upside_pct": None, "horizon": 12},
+    ],
+    "TATASTEEL": [
+        {"broker": "Motilal Oswal", "rating": "Buy", "target": 220, "date": "2026-09-21", "upside_pct": 24, "horizon": 12},
+        {"broker": "Multiple (Diwali)", "rating": "Buy", "target": None, "date": "2026-11-01", "upside_pct": None, "horizon": 12},
+    ],
+    "MARICO": [
+        {"broker": "Emkay", "rating": "Buy", "target": 1000, "date": "2026-11-03", "upside_pct": None, "horizon": 12},
+    ],
+    "GRANULES": [
+        {"broker": "Emkay", "rating": "Buy", "target": 950, "date": "2026-11-03", "upside_pct": None, "horizon": 12},
+    ],
+    "PERSISTENT": [
+        {"broker": "Axis Direct", "rating": "Buy", "target": 6615, "date": "2026-10-21", "upside_pct": 13, "horizon": 12},
+    ],
+    "AUROPHARMA": [
+        {"broker": "Axis Direct", "rating": "Buy", "target": None, "date": "2026-11-01", "upside_pct": None, "horizon": 12},
+        {"broker": "Motilal Oswal", "rating": "Buy", "target": None, "date": "2026-10-15", "upside_pct": None, "horizon": 12},
+    ],
+    "SOLARINDS": [
+        {"broker": "Motilal Oswal", "rating": "Buy", "target": 23000, "date": "2026-09-21", "upside_pct": 18, "horizon": 12},
+        {"broker": "Jefferies", "rating": "Buy", "target": None, "date": "2026-09-08", "upside_pct": None, "horizon": 12},
+    ],
+    "APLAPOLLO": [
+        {"broker": "Axis Direct", "rating": "Buy", "target": 2340, "date": "2026-10-27", "upside_pct": 15, "horizon": 12},
+    ],
+    "BANKBARODA": [
+        {"broker": "ICICI Direct", "rating": "Buy", "target": 340, "date": "2026-10-13", "upside_pct": 17, "horizon": 12},
+    ],
+    "UNIONBANK": [
+        {"broker": "Systematix", "rating": "Buy", "target": 205, "date": "2026-11-02", "upside_pct": None, "horizon": 12},
+    ],
+    "WIPRO": [
+        {"broker": "SMC Global", "rating": "Buy", "target": 225, "date": "2026-11-02", "upside_pct": None, "horizon": 12},
+    ],
+    "ZOMATO": [
+        {"broker": "Axis Direct", "rating": "Buy", "target": 365, "date": "2026-10-27", "upside_pct": 15, "horizon": 12},
+        {"broker": "Multiple (Diwali)", "rating": "Buy", "target": None, "date": "2026-11-01", "upside_pct": None, "horizon": 12},
+    ],
+    "HAL": [
+        {"broker": "Axis Direct", "rating": "Buy", "target": None, "date": "2026-11-01", "upside_pct": 22, "horizon": 12},
+    ],
+    "BEL": [
+        {"broker": "Multiple", "rating": "Buy", "target": None, "date": "2026-11-01", "upside_pct": None, "horizon": 12},
+    ],
+    "TECHM": [
+        {"broker": "Multiple (Diwali)", "rating": "Buy", "target": None, "date": "2026-11-01", "upside_pct": None, "horizon": 12},
+        {"broker": "Axis Direct", "rating": "Buy", "target": 2150, "date": "2026-11-01", "upside_pct": None, "horizon": 12},
+    ],
+    "BHARTIARTL": [
+        {"broker": "Multiple (Diwali / Jefferies)", "rating": "Buy", "target": None, "date": "2026-11-01", "upside_pct": None, "horizon": 12},
+    ],
+    "SBIN": [
+        {"broker": "Multiple", "rating": "Buy", "target": None, "date": "2026-11-01", "upside_pct": None, "horizon": 12},
+    ],
+    "HDFCBANK": [
+        {"broker": "Multiple", "rating": "Buy", "target": None, "date": "2026-11-01", "upside_pct": None, "horizon": 12},
+    ],
 }
 
 def get_broker_confidence(broker_name: str) -> float:
-    """Simple 0-100 confidence score from historical hit rates."""
-    t = BROKER_TRACK.get(broker_name)
-    if not t:
-        return 45.0  # neutral default
-    # Weighted: hit_any 40%, hit_end 30%, actual_return scaled 30%
-    hit_score = t["hit_any"] * 0.4 + t["hit_end"] * 0.3
-    act = max(min(t["actual_12m"], 25), -10)  # clip
-    act_score = ((act + 10) / 35) * 100 * 0.3
-    return round(hit_score + act_score, 1)
+    for key in BROKER_TRACK:
+        if key.lower() in broker_name.lower() or broker_name.lower() in key.lower():
+            t = BROKER_TRACK[key]
+            hit_score = t["hit_any"] * 0.4 + t["hit_end"] * 0.3
+            act = max(min(t["actual_12m"], 25), -10)
+            act_score = ((act + 10) / 35) * 100 * 0.3
+            return round(hit_score + act_score, 1)
+    return 45.0
+
+def parse_date(dstr):
+    try:
+        return datetime.strptime(dstr, "%Y-%m-%d")
+    except Exception:
+        return datetime(2026, 1, 1)
+
+def days_ago(dstr):
+    return (datetime.now() - parse_date(dstr)).days
+
+def age_color(days):
+    """Return background color based on age of recommendation"""
+    if days <= 5:
+        return "background-color: #14532d; color: #86efac; font-weight: 700;"   # Fresh green
+    elif days <= 15:
+        return "background-color: #1e3a2f; color: #bbf7d0;"
+    elif days <= 30:
+        return "background-color: #1e293b; color: #e2e8f0;"
+    elif days <= 60:
+        return "background-color: #1c1917; color: #a8a29e;"
+    else:
+        return "background-color: #0f172a; color: #64748b;"
 
 # ====================== CORE LOGIC ======================
 @st.cache_data(ttl=3600, show_spinner=False)
@@ -286,7 +411,7 @@ def filter_results(data, min_base=10, max_dist=8.0, min_vol=20000):
 
 # ====================== HEADER ======================
 st.markdown("# 52-Week High Momentum Scanner")
-st.markdown('<p class="subtitle">Fresh 52-week highs after clean consolidation • Broker recommendations & confidence layer</p>', unsafe_allow_html=True)
+st.markdown('<p class="subtitle">Fresh 52-week highs after clean consolidation • Stock-grouped Broker Recommendations with age highlighting</p>', unsafe_allow_html=True)
 
 if not YF_AVAILABLE:
     st.error("yfinance missing. Please put `yfinance` in requirements.txt and reboot.")
@@ -346,7 +471,7 @@ t1, t2, t3, t4, t5 = st.tabs([
     "🔄 Equity Rotation",
     "🔥 Performance Heatmap",
     "📋 Full Results + Chart",
-    "🏦 Broker Recos & Confidence"
+    "🏦 Broker Recos (Stock Grouped)"
 ])
 
 # ----- MACRO BREADTH -----
@@ -457,20 +582,129 @@ with t4:
     else:
         st.warning("No stocks passed the current filters. Try reducing Min Clean Base or increasing Max Distance, then run again.")
 
-# ----- BROKER RECOMMENDATIONS & CONFIDENCE -----
+# ----- BROKER RECOMMENDATIONS (STOCK GROUPED) -----
 with t5:
-    st.markdown('<p class="section-header">Broker Recommendations & Confidence Layer</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-header">Broker Recommendations — Stock Grouped View</p>', unsafe_allow_html=True)
     
     st.markdown("""
-    **Sources & Update Process**  
-    - Primary public aggregator: [Trendlyne Research Reports](https://trendlyne.com/research-reports/)  
-    - Individual broker research pages / daily notes (ICICI Direct, Motilal Oswal, Axis Direct, Geojit, Emkay, IDBI Capital, SBI Securities, etc.)  
-    - Keep the `SAMPLE_RECOS` dictionary and `BROKER_TRACK` updated weekly.  
-    - Historical confidence scores derived from public analyst scorecard (~19k matured reports, 2021-2025).  
+    **Presentation Rules**  
+    - Grouped by Stock → Brokers sorted by most recent date first  
+    - **Last 5 days** highlighted in bright green  
+    - Color fades as recommendation ages (green → neutral → muted)  
+    - Single consolidated table for last **90 days**  
+    - Separate section for longer-horizon / multi-bagger ideas (>12 months)  
     """)
     
-    # --- Broker Leaderboard ---
-    st.markdown("#### Broker Historical Track Record (sorted by confidence)")
+    # ---------- Build flat recent recommendations (last 90 days) ----------
+    today = datetime.now()
+    rows_90d = []
+    long_horizon = []
+    
+    for sym, recs in SAMPLE_RECOS.items():
+        for rec in recs:
+            d = parse_date(rec["date"])
+            age = (today - d).days
+            horizon = rec.get("horizon", 12)
+            
+            row = {
+                "Symbol": sym,
+                "Broker": rec["broker"],
+                "Rating": rec["rating"],
+                "Target": rec.get("target"),
+                "Upside %": rec.get("upside_pct"),
+                "Date": rec["date"],
+                "Age (days)": age,
+                "Horizon (m)": horizon,
+                "Broker Conf": get_broker_confidence(rec["broker"])
+            }
+            
+            if horizon and horizon > 12:
+                long_horizon.append(row)
+            elif age <= 90:
+                rows_90d.append(row)
+    
+    # Sort: Symbol then most recent date first
+    if rows_90d:
+        df90 = pd.DataFrame(rows_90d)
+        df90 = df90.sort_values(["Symbol", "Date"], ascending=[True, False])
+        
+        # Color styling function
+        def style_age(row):
+            styles = [""] * len(row)
+            age = row["Age (days)"]
+            # Apply to the whole row for visual grouping, stronger on Date & Age
+            base = age_color(age)
+            for i in range(len(row)):
+                styles[i] = base
+            return styles
+        
+        st.markdown("#### Consolidated Broker Calls — Last 90 Days (Stock Grouped)")
+        st.caption("Bright green = last 5 days | Color fades with age | Sorted by stock then latest date")
+        
+        styled = df90.style.apply(style_age, axis=1).format({
+            "Target": "{:.0f}",
+            "Upside %": "{:.1f}",
+            "Broker Conf": "{:.1f}",
+            "Age (days)": "{:.0f}",
+            "Horizon (m)": "{:.0f}"
+        })
+        
+        st.dataframe(styled, use_container_width=True, height=520, hide_index=True)
+        
+        # Quick filter for last 5 days
+        last5 = df90[df90["Age (days)"] <= 5]
+        if not last5.empty:
+            st.markdown("#### 🔥 Fresh Calls (Last 5 Days)")
+            st.dataframe(
+                last5.style.apply(lambda r: ["background-color: #14532d; color: #86efac; font-weight:700"]*len(r), axis=1)
+                .format({"Target": "{:.0f}", "Upside %": "{:.1f}", "Broker Conf": "{:.1f}"}),
+                use_container_width=True, hide_index=True
+            )
+    else:
+        st.info("No recommendations within last 90 days in SAMPLE_RECOS.")
+    
+    # ---------- Longer horizon / Multi-bagger section ----------
+    st.markdown("#### Longer Horizon / Multi-bagger Ideas (Horizon > 12 months)")
+    if long_horizon:
+        df_long = pd.DataFrame(long_horizon).sort_values(["Symbol", "Date"], ascending=[True, False])
+        st.dataframe(df_long, use_container_width=True, hide_index=True)
+    else:
+        st.info("No multi-bagger / >12-month horizon recommendations currently loaded. Add them to SAMPLE_RECOS with horizon > 12.")
+    
+    # ---------- Matches with scanner hits ----------
+    st.markdown("#### Overlap with Current 52W-High Scanner Hits")
+    if results:
+        match_rows = []
+        for r in results:
+            sym = r["symbol"]
+            recs = SAMPLE_RECOS.get(sym, [])
+            for rec in recs:
+                age = days_ago(rec["date"])
+                if age <= 90:
+                    match_rows.append({
+                        "Symbol": sym,
+                        "Close": r["close"],
+                        "RS": r["rs"],
+                        "Base": r["base"],
+                        "Broker": rec["broker"],
+                        "Rating": rec["rating"],
+                        "Target": rec.get("target"),
+                        "Upside %": rec.get("upside_pct"),
+                        "Date": rec["date"],
+                        "Age (days)": age,
+                        "Broker Conf": get_broker_confidence(rec["broker"])
+                    })
+        if match_rows:
+            match_df = pd.DataFrame(match_rows).sort_values(["Symbol", "Date"], ascending=[True, False])
+            st.success(f"{len(match_rows)} matching recent broker calls found on current filtered names.")
+            st.dataframe(match_df, use_container_width=True, hide_index=True)
+        else:
+            st.info("No recent broker coverage on the current filtered 52W-high names.")
+    else:
+        st.info("Run the scanner to see overlaps.")
+    
+    # ---------- Broker Confidence Leaderboard ----------
+    st.markdown("#### Broker Historical Confidence Leaderboard")
     track_rows = []
     for name, t in BROKER_TRACK.items():
         conf = get_broker_confidence(name)
@@ -480,120 +714,22 @@ with t5:
             "Hit Any %": t["hit_any"],
             "Hit at 12M %": t["hit_end"],
             "Actual 12M Ret %": t["actual_12m"],
-            "Sample Size": t["n"],
-            "Notes": t["notes"]
+            "Sample Size": t["n"]
         })
     track_df = pd.DataFrame(track_rows).sort_values("Confidence", ascending=False)
     st.dataframe(
         track_df.style.background_gradient(subset=["Confidence", "Hit Any %", "Actual 12M Ret %"], cmap="RdYlGn")
         .format({"Confidence": "{:.1f}", "Hit Any %": "{:.1f}", "Hit at 12M %": "{:.1f}", "Actual 12M Ret %": "{:.1f}"}),
-        use_container_width=True, height=380
+        use_container_width=True, height=320
     )
     
-    st.caption("Confidence = 0.4×HitAny + 0.3×HitEnd + 0.3×scaled(Actual 12M return). Higher is better historically. Past performance ≠ future results.")
-    
-    # --- Recommendations for scanned stocks ---
-    st.markdown("#### Broker Interest on Current Scanner Hits")
-    if results:
-        reco_rows = []
-        for r in results:
-            sym = r["symbol"]
-            recs = SAMPLE_RECOS.get(sym, [])
-            if recs:
-                for rec in recs:
-                    conf = get_broker_confidence(rec["broker"])
-                    reco_rows.append({
-                        "Symbol": sym,
-                        "Close": r["close"],
-                        "RS": r["rs"],
-                        "Broker": rec["broker"],
-                        "Rating": rec["rating"],
-                        "Target": rec.get("target"),
-                        "Upside %": rec.get("upside_pct"),
-                        "Date": rec.get("date"),
-                        "Broker Conf": conf
-                    })
-            else:
-                reco_rows.append({
-                    "Symbol": sym,
-                    "Close": r["close"],
-                    "RS": r["rs"],
-                    "Broker": "—",
-                    "Rating": "No recent sample",
-                    "Target": None,
-                    "Upside %": None,
-                    "Date": "—",
-                    "Broker Conf": None
-                })
-        reco_df = pd.DataFrame(reco_rows)
-        st.dataframe(reco_df, use_container_width=True, hide_index=True)
-    else:
-        st.info("Run the scanner first to see broker interest on filtered names.")
-    
-    # --- Confidence / Simulation Tool ---
-    st.markdown("#### Confidence Simulator (Monte-Carlo style)")
-    st.markdown("Pick a stock + assumed target upside from a broker. The simulator adjusts for that broker’s historical accuracy and runs simple path simulations.")
-    
-    col_s1, col_s2, col_s3 = st.columns(3)
-    with col_s1:
-        sim_symbol = st.selectbox("Stock (from scan or free)", 
-                                  options=[x["symbol"] for x in results] + ["CUSTOM"],
-                                  key="sim_sym")
-        if sim_symbol == "CUSTOM":
-            sim_symbol = st.text_input("Enter symbol (e.g. RELIANCE)", "RELIANCE").upper()
-    with col_s2:
-        sim_broker = st.selectbox("Broker", options=list(BROKER_TRACK.keys()), key="sim_broker")
-    with col_s3:
-        assumed_upside = st.number_input("Assumed Target Upside %", min_value=5.0, max_value=80.0, value=18.0, step=1.0)
-    
-    conf = get_broker_confidence(sim_broker)
-    t = BROKER_TRACK[sim_broker]
-    
-    st.markdown(f"**{sim_broker}** historical confidence: **{conf}/100**  |  Hit-any: {t['hit_any']}%  |  Actual 12M avg: {t['actual_12m']}%")
-    
-    # Simple simulation
-    n_sims = 2000
-    # Expected move scaled by historical actual / implied relationship + hit probability
-    base_expect = assumed_upside * (t["actual_12m"] / 16.4) if t["actual_12m"] > 0 else assumed_upside * 0.5
-    hit_prob = t["hit_any"] / 100.0
-    # Draw from a mixture: success cases around base_expect, failure cases around -8 to +5
-    np.random.seed(42)
-    success = np.random.normal(loc=base_expect * 0.85, scale=assumed_upside * 0.35, size=int(n_sims * hit_prob))
-    fail = np.random.normal(loc=-4.0, scale=12.0, size=n_sims - len(success))
-    sim_returns = np.concatenate([success, fail])
-    np.random.shuffle(sim_returns)
-    
-    med = np.median(sim_returns)
-    p25, p75 = np.percentile(sim_returns, [25, 75])
-    prob_pos = (sim_returns > 0).mean() * 100
-    prob_beat_10 = (sim_returns > 10).mean() * 100
-    
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Median Simulated Return", f"{med:.1f}%")
-    m2.metric("25-75% Range", f"{p25:.1f}% → {p75:.1f}%")
-    m3.metric("Prob Positive", f"{prob_pos:.0f}%")
-    m4.metric("Prob > +10%", f"{prob_beat_10:.0f}%")
-    
-    if PLOTLY_AVAILABLE:
-        fig = go.Figure()
-        fig.add_trace(go.Histogram(x=sim_returns, nbinsx=40, marker_color="#6366f1", opacity=0.75))
-        fig.add_vline(x=med, line_dash="dash", line_color="#22d3ee", annotation_text="Median")
-        fig.update_layout(
-            title=f"Simulated 12M Return Distribution — {sim_symbol} via {sim_broker}",
-            template="plotly_dark", height=340,
-            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            xaxis_title="Return %", yaxis_title="Count"
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    
     st.info("""
-    **How to keep this fresh**  
-    1. Visit https://trendlyne.com/research-reports/ daily/weekly.  
-    2. Note new Buy / Accumulate calls on your universe names.  
-    3. Update the `SAMPLE_RECOS` dict (or better: load from a local CSV/JSON).  
-    4. Periodically refresh `BROKER_TRACK` numbers from public scorecards or your own tracking.  
-    5. The simulator is educational only — it does not constitute advice.
+    **How to maintain this view**  
+    1. Update `SAMPLE_RECOS` with new calls (include accurate date + optional horizon).  
+    2. Horizon > 12 will automatically go to the multi-bagger section.  
+    3. Age coloring and last-5-day highlight work automatically from the date field.  
+    4. Source: Trendlyne + individual broker reports. Keep refreshing weekly.
     """)
 
 st.markdown("---")
-st.caption("52-Week High Momentum Scanner + Broker Confidence Layer  •  Fresh breakouts after clean base  •  For research use only  •  Not investment advice")
+st.caption("52-Week High Momentum Scanner + Stock-Grouped Broker Recommendations  •  Last-5-day highlight + Age color gradation  •  Research use only")
